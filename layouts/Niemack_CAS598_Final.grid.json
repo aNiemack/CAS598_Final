@@ -3,7 +3,7 @@
   "data": {
     "columns": 34,
     "rowHeight": 20,
-    "maxWidth": 2200,
+    "maxWidth": 2000,
     "bordered": false,
     "cells": [
       {
@@ -21,9 +21,10 @@
         "position": [
           25,
           2,
-          8.5,
-          121
-        ]
+          9,
+          57
+        ],
+        "scrollable": true
       },
       {
         "position": [
