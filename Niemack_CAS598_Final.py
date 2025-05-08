@@ -28,6 +28,234 @@ def _(mo):
 
 
 @app.cell
+def _(mo):
+    mo.md(
+        r"""
+    ```python
+    def calculate_cost(grouped):
+        if type(grouped[0][0]) == list:
+            return sum([x[0] for xs in grouped for x in xs])
+        else:
+            return sum([x for xs in grouped for x in xs])
+
+
+    def find_increase_linear(xs, rate, years, competitor_band):
+        new = []
+        for i, x in enumerate(xs):
+            for band in reversed(competitor_band):
+                if band <= x:
+                    target = band
+                    for i in range(1, years + 1):
+                        target = target * (1 + rate)
+
+                    linear_increase = (target - x) / years
+
+                    new.append([x, linear_increase, target])
+                    break
+        return new
+
+
+    def increase_linear(grouped):
+        for i, x in enumerate(grouped):
+            for j, v in enumerate(x):
+                if v[1] > 0:
+                    grouped[i][j][0] = v[0] + v[1]
+                else:
+                    grouped[i][j][0] = v[0]
+
+        return grouped
+
+
+    def attrition_linear(grouped, year, years, band, comp_rate, comp_crossover):
+        rate = 0.5 / years
+
+        top = max(band)
+        for y in range(0, year):
+            top = top * (1 + rate)
+
+        band.append(top)
+
+        for i, group in enumerate(grouped):
+            if len(group) > 1:
+                starting_length = len(group)
+                amount = math.ceil(len(group) * rate)
+                random.shuffle(group)
+                attritioned = group[amount:]
+
+                for p in reversed(band):
+                    if p <= median([x[0] for x in attritioned]):
+                        new_target = p
+
+                        for k in range(1, comp_crossover + 1):
+                            new_target = new_target * (1 + comp_rate)
+
+                        linear_increase = (new_target - p) / comp_crossover
+
+                        while len(attritioned) < starting_length:
+                            attritioned.append(
+                                [
+                                    p,
+                                    linear_increase
+                                    if year < years
+                                    else linear_increase * 0.1,
+                                    new_target,
+                                ]
+                            )
+                        break
+
+                grouped[i] = attritioned
+
+        return grouped, band
+
+
+    def increase_percentage(grouped, rate):
+        for i, x in enumerate(grouped):
+            for j, value in enumerate(x):
+                grouped[i][j] = value * (1 + rate)
+
+        return grouped
+
+
+    def attrition(grouped, year, years, band, rate):
+        rate = 0.5 / years
+
+        top = max(band)
+        for y in range(0, year):
+            top = top * (1 + rate)
+
+        band.append(top)
+
+        for i, group in enumerate(grouped):
+            if len(group) > 1:
+                starting_length = len(group)
+                amount = math.ceil(len(group) * rate)
+                random.shuffle(group)
+                attritioned = group[amount:]
+                for p in reversed(band):
+                    if p <= median(attritioned):
+                        while len(attritioned) < starting_length:
+                            attritioned.append(p)
+                        break
+                grouped[i] = attritioned
+
+        return grouped, band
+
+
+    def percentage(xs, pay_band, rate, turnover, steps):
+        print("starting median: ", median(xs))
+        per = []
+        grouped = sorted([list(j) for i, j in groupby(xs)])
+        band = copy.deepcopy(pay_band)
+
+        medians = []
+
+        for year in range(1, steps):
+            per.append(calculate_cost(grouped))
+            grouped = increase_percentage(grouped, rate)
+            grouped, band = attrition(grouped, year, turnover, band, rate)
+            medians.append(median([x for xs in grouped for x in xs]))
+
+        print("final median: ", median([x for xs in grouped for x in xs]))
+        print("lowest paid: ", min(grouped[0]))
+        print("highest paid: ", max(grouped[-1]))
+        print(len(grouped))
+        total = sum(per)
+        print("total cost: ", total)
+
+        data = pd.DataFrame({"year": range(1, steps), "cost": per})
+        chart = (
+            alt.Chart(data, title="Annual Payroll Cost")
+            .mark_line(color="blue")
+            .encode(
+                x="year",
+                y="cost",
+            )
+        )
+
+        percent_chart = mo.ui.altair_chart(chart)
+
+        data = pd.DataFrame({"year": range(1, steps), "pay": medians})
+        chart = (
+            alt.Chart(data, title="Annual Median Pay")
+            .mark_line(color="cyan")
+            .encode(
+                x="year",
+                y="pay",
+            )
+        )
+
+        percent_median_chart = mo.ui.altair_chart(chart)
+
+        return total, per, percent_chart, percent_median_chart, medians
+
+
+    def linear(xs, comp_band, comp_rate, comp_crossover, turnover, steps):
+        print("starting median: ", median(xs))
+        linear_xs = find_increase_linear(xs, comp_rate, comp_crossover, comp_band)
+        linear = []
+        grouped = sorted([list(j) for i, j in groupby(linear_xs)])
+        band = copy.deepcopy(xs)
+
+        medians = []
+
+        for year in range(0, steps):
+            linear.append(calculate_cost(grouped))
+            grouped = increase_linear(grouped)
+            grouped, band = attrition_linear(
+                grouped, year, turnover, band, comp_rate, comp_crossover
+            )
+            interem = []
+            for group in grouped:
+                for unit in group:
+                    interem.append(unit[0])
+
+            medians.append(median(interem))
+
+        final = []
+        for group in grouped:
+            for unit in group:
+                final.append(unit[0])
+
+        print("final median: ", median(final))
+        print("lowest paid: ", min(grouped[0]))
+        print("highest paid: ", max(grouped[-1]))
+        print(len(grouped))
+        linear_total = sum(linear)
+        print("total cost: ", linear_total)
+        print(len(linear))
+
+        data = pd.DataFrame({"year": range(0, steps), "cost": linear})
+        chart = (
+            alt.Chart(data, title="Annual Payroll Cost")
+            .mark_line(color="orange")
+            .encode(
+                x="year",
+                y="cost",
+            )
+        )
+
+        linear_chart = mo.ui.altair_chart(chart)
+
+        data = pd.DataFrame({"year": range(0, steps), "pay": medians})
+        chart = (
+            alt.Chart(data, title="Annual Median Pay")
+            .mark_line(color="red")
+            .encode(
+                x="year",
+                y="pay",
+            )
+        )
+
+        linear_median_chart = mo.ui.altair_chart(chart)
+
+        return linear_total, linear, linear_chart, linear_median_chart, medians
+    ```
+    """
+    )
+    return
+
+
+@app.cell
 def _(alt, copy, groupby, math, median, mo, pd, random):
     def calculate_cost(grouped):
         if type(grouped[0][0]) == list:
