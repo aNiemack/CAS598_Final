@@ -21,7 +21,7 @@ jobs:
 
             - name: 📄 Export notebook
               run: |
-                  marimo export html-wasm Niemack_CAS598_Final.py -o path/to/output --mode run --show-code --include-code
+                  marimo export html-wasm Niemack_CAS598_Final.py -o path/to/output --mode run --show-code
 
             - name: 📦 Upload Pages Artifact
               uses: actions/upload-pages-artifact@v3
